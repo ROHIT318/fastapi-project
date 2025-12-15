@@ -1,7 +1,10 @@
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Depends
 from dotenv import load_dotenv
 import os
-from app.schemas import EntrySchema
+from app.schemas import EntrySchema 
+import app.db_connection
+from app.db_connection import Entry, engine, SessionCreator
+from sqlalchemy.orm import Session
 from app.db import Entry, create_db_and_tables, get_async_session
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +19,7 @@ load_dotenv('.\env_var.txt')
 IMAGEKIT_PRIVATE_KEY = os.getenv("IMAGEKIT_PRIVATE_KEY")
 
 fast_api = FastAPI()
+app.db_connection.Base.metadata.create_all(bind=engine)
 
 @fast_api.get("/start_app")
 def start_app():
@@ -31,11 +35,28 @@ all_data_json = {
     6: {"fname": "Anil", "lname": "Singh", "location": "JAP"}
 }
 
+def create_db_conn():
+    db = SessionCreator()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Store the data in Database
+@fast_api.post('/store_data')
+def store_data(db: Session = Depends(create_db_conn)) -> dict():
+    for i in all_data_json:
+        db.add(Entry(fname=all_data_json[i]['fname'], lname=all_data_json[i]['lname']))
+    db.commit()
+    return HTTPException(status_code=200, detail="Execution Successful !!")
+
+
 # Fetch all data from server
 @fast_api.get('/get_all_entry/{limit}')
-def get_all_entry(limit: int=None) -> dict():
+def get_all_entry(limit: int=None, db: Session=Depends(create_db_conn)):
     if limit:
-        return list(all_data_json.values())[:limit]
+        # return list(all_data_json.values())[:limit]
+        return db.query(Entry).limit(limit).all()
     return all_data_json
 
 
@@ -65,7 +86,7 @@ def delete_entry(id: int=None):
         output = all_data_json.pop(id)
         return HTTPException(status_code=200, detail=output)
     except:
-        return HTTPException(status_code=404, detail=f"Error Happened !!")
+        return HTTPException(status_code=404, detail="Error Happened !!")
     
 # File uploads
 @fast_api.post('/file_upload/')
