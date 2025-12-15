@@ -10,11 +10,15 @@ from datetime import datetime
 from sqlalchemy.dialects.postgresql import UUID
 # Async database engine and session utilities for non‑blocking DB operations.
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-# used for declaring SQLalchemy orm models in fastapi, improves readability, type safety. Defines relationships between tables.
-from sqlalchemy.orm import DeclarativeBase, relationship
 
 # Connection string for SQLite. DB file name will be test.db
 DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+
+# Column tyypes and constraints
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey
+from datetime import datetime
+# used for declaring SQLalchemy orm models in fastapi, improves readability, type safety. Defines relationships between tables.
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 class Base(DeclarativeBase):
     pass
