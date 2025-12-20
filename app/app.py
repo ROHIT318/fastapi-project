@@ -1,22 +1,12 @@
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Depends
+from fastapi import FastAPI, HTTPException, Depends
 from dotenv import load_dotenv
 import os
-# from app.schemas import EntrySchema 
 import app.db_connection
 from app.db_connection import engine, SessionCreator, Entry
 from app.schemas import EntryCreate
 from sqlalchemy.orm import Session
-# from app.db import Entry, create_db_and_tables, get_async_session
-from sqlalchemy.ext.asyncio import AsyncSession
-from contextlib import asynccontextmanager
-# from psycopg2.errors import UniqueViolation
 from sqlalchemy.exc import IntegrityError
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await create_db_and_tables()
-    yield
 
 load_dotenv('.\env_var.txt')
 IMAGEKIT_PRIVATE_KEY = os.getenv("IMAGEKIT_PRIVATE_KEY")
@@ -48,10 +38,10 @@ def create_db_conn():
 
 # Store the data in Database
 @fast_api.post('/store_data')
-def store_data(db: Session = Depends(create_db_conn)) -> {}:
+def store_data(db: Session = Depends(create_db_conn)):
     for i in all_data_json:
         db.add(Entry(id=i, fname=all_data_json[i]['fname'], lname=all_data_json[i]['lname']))
-    return HTTPException(status_code=200, detail="Execution Successful !!")
+    raise HTTPException(status_code=200, detail="Execution Successful !!")
 
 
 # Fetch all data from server
@@ -70,7 +60,7 @@ def get_particular_entry(id: int=None, db: Session=Depends(create_db_conn)):
     if product is not None:
         return product
     else:
-        return HTTPException(status_code=404, detail="Product Not Found !!")
+        raise HTTPException(status_code=404, detail="Product Not Found !!")
 
 
 # Create an entry in existing dictionary or JSON
@@ -85,9 +75,9 @@ def create_entry(data: EntryCreate, db: Session = Depends(create_db_conn)):
             dp_url = data.dp_url
         ))
     except IntegrityError as e:
-        return HTTPException(status_code=404, detail='Unique id taken !!')
+        raise HTTPException(status_code=404, detail='Unique id taken !!')
     except:
-        return HTTPException(status_code=404, detail='Entry not Created Successfully !!')
+        raise HTTPException(status_code=404, detail='Entry not Created Successfully !!')
     
 
 # Create an entry in existing dictionary or JSON
@@ -102,10 +92,10 @@ def update_entry(id: int = None, fname: str = None, lname: str = None, dp_url: s
                 Entry.lname: lname, 
                 Entry.dp_url: dp_url
             })
-            return HTTPException(status_code=200, detail='Entry updated Successfully !!')
-        return HTTPException(status_code=404, detail="Entry id doesn't exists !!")
+            return {"msg": "Entry updated Successfully !!"}
+        raise HTTPException(status_code=404, detail="Entry id doesn't exists !!")
     except:
-        return HTTPException(status_code=404, detail='Entry not updated Successfully !!')
+        raise HTTPException(status_code=404, detail='Entry not updated Successfully !!')
     
 
 # Delete existing entries
@@ -113,24 +103,16 @@ def update_entry(id: int = None, fname: str = None, lname: str = None, dp_url: s
 def delete_entry(id: int=None, db: Session = Depends(create_db_conn)):
     try:
         db.query(Entry).filter(Entry.id == id).delete()
-        return HTTPException(status_code=200, detail=f" Deleted Record....")
+        return {"msg": "Entry removed Successfully !!"}
     except:
-        return HTTPException(status_code=404, detail="Error Happened !!")
+        raise HTTPException(status_code=404, detail="Error Happened !!")
     
 # Drop a particular table from database
 @fast_api.delete('/drop_table/{tbl_name}')
 def delete_table(tbl_name: str = None):
     try:  
         tbl_obj = getattr(app.db_connection, tbl_name)
-        tbl_obj.metadata.drop_all(bind=engine)    
-        return HTTPException(status_code=200, detail=f"Dropped table {tbl_name}")
+        tbl_obj.metadata.drop_all(bind=engine)   
+        return {"msg": "Dropped table {tbl_name}"}
     except:
-        return HTTPException(status_code=404, detail="Error Happened !!")
-
-
-# File uploads
-# @fast_api.post('/file_upload/')
-# async def file_upload(file: UploadFile=File(...), caption:str=Form(''), session:AsyncSession=Depends(get_async_session)):
-#     pass
-
-        
+        raise HTTPException(status_code=404, detail="Error Happened !!")
