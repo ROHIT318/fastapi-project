@@ -1,4 +1,4 @@
-from sqlalchemy.orm import sessionmaker, DeclarativeBase, Session
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
 import os
@@ -38,7 +38,7 @@ class Base(DeclarativeBase):
 class Entry(Base):
     __tablename__ = "Entry"
 
-    id = Column(Text, primary_key=True)
+    id = Column(Integer, primary_key=True)
     fname = Column(Text)
     lname = Column(Text)
     dp_url = Column(String)
